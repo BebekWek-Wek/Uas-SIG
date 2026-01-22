@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <title>WebGIS Fasilitas Farmasi Kalimantan Utara</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body, #map {
+      height: 100%;
+      width: 100%;
+    }
+
+    /* === JUDUL === */
+    .map-title {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 999;
+      background: rgba(255,255,255,0.95);
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 16px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      text-align: center;
+    }
+/* Contoh CSS yang diperlukan */
+.region-label {
+  background-color: white;
+  padding: 4px 12px;
+  border-radius: 4px;
+  border: 2px solid #ccc;
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.region-label-icon {
+  background: transparent !important;
+  border: none !important;
+}
+    /* === PANEL KONTROL === */
+    .control-panel {
+      position: absolute;
+      top: 80px;
+      left: 20px;
+      z-index: 999;
+      background: rgba(255,255,255,0.95);
+      padding: 15px;
+      border-radius: 8px;
+      width: 300px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .control-section {
+      margin-bottom: 20px;
+    }
+
+    .control-section h3 {
+      margin-bottom: 10px;
+      color: #333;
+      border-bottom: 2px solid #4CAF50;
+      padding-bottom: 5px;
+    }
+
+    .control-item {
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      margin: 5px 0;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .control-item:hover {
+      background: #f0f0f0;
+    }
+
+    .color-box {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      margin-right: 10px;
+      border: 1px solid #ccc;
+    }
+
+    .icon-box {
+      width: 24px;
+      height: 24px;
+      margin-right: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .control-label {
+      flex: 1;
+      font-size: 14px;
+    }
+
+    .control-checkbox {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
+    .control-btn {
+      width: 100%;
+      padding: 10px;
+      margin: 5px 0;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: opacity 0.2s;
+    }
+
+    .btn-apply {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .btn-reset {
+      background: #f44336;
+      color: white;
+    }
+
+    .control-btn:hover {
+      opacity: 0.9;
+    }
+
+    /* === INFORMASI === */
+    .info-panel {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      z-index: 999;
+      background: rgba(255,255,255,0.95);
+      padding: 15px;
+      border-radius: 8px;
+      max-width: 300px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+
+    .info-panel h4 {
+      margin-bottom: 10px;
+      color: #333;
+    }
+
+    .info-panel p {
+      font-size: 12px;
+      line-height: 1.5;
+      color: #666;
+    }
+
+    /* === NORTH ARROW === */
+    .north-arrow {
+      position: absolute;
+      top: 90px;
+      right: 20px;
+      z-index: 999;
+      background:transparent;
+      padding: 20px;
+      border-radius: 6px;
+      text-align: center;
+      font-weight: bold;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    .north-arrow img {
+      width: 150px;
+    }
+
+    /* === STATUS MESSAGE === */
+    .status-message {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1000;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 15px 25px;
+      border-radius: 8px;
+      text-align: center;
+      display: none;
+      font-size: 14px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    /* === STYLE UNTUK LABEL WILAYAH === */
+    .region-label {
+      font-weight: bold;
+      font-size: 12px;
+      text-shadow: 
+        -1px -1px 0 white,
+        1px -1px 0 white,
+        -1px 1px 0 white,
+        1px 1px 0 white;
+      pointer-events: none;
+      text-align: center;
+      padding: 2px 5px;
+      border-radius: 3px;
+      background-color: rgba(255, 255, 255, 0.6);
+    }
+  </style>
+</head>
+
+<body>
+  <!-- JUDUL -->
+  <div class="map-title">
+    <h1>Sebaran Fasilitas Farmasi</h1>
+    Kalimantan Utara
+  </div>
+
+  <!-- PANEL KONTROL -->
+  <div class="control-panel">
+    <div class="control-section">
+      <h3>📍 Filter Wilayah</h3>
+      <div id="region-controls"></div>
+    </div>
+
+    <div class="control-section">
+      <h3>🏥 Filter Fasilitas</h3>
+      <div class="control-item" onclick="toggleCheckbox('all-facilities')">
+        <div class="icon-box">
+          <span style="color: #e53935;">🏥</span>
+          <span style="color: #1e88e5;">💊</span>
+        </div>
+        <div class="control-label">Semua Fasilitas</div>
+        <input type="checkbox" class="control-checkbox" id="all-facilities" checked data-type="all">
+      </div>
+      
+      <div class="control-item" onclick="toggleCheckbox('rs-only')">
+        <div class="icon-box">
+          <span style="color: #e53935; font-size: 18px;">🏥</span>
+        </div>
+        <div class="control-label">Rumah Sakit</div>
+        <input type="checkbox" class="control-checkbox" id="rs-only" checked data-type="rs">
+      </div>
+      
+      <div class="control-item" onclick="toggleCheckbox('apotek-only')">
+        <div class="icon-box">
+          <span style="color: #1e88e5; font-size: 18px;">💊</span>
+        </div>
+        <div class="control-label">Apotek</div>
+        <input type="checkbox" class="control-checkbox" id="apotek-only" checked data-type="apotek">
+      </div>
+    </div>
+
+    <div class="control-section">
+      <button class="control-btn btn-apply" onclick="applyFilters()">
+        Terapkan Filter
+      </button>
+      <button class="control-btn btn-reset" onclick="resetFilters()">
+        Reset Semua
+      </button>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div id="map"></div>
+
+  <!-- NORTH ARROW -->
+  <div class="north-arrow">
+    <img src="assets/kompas.png">
+  </div>
+
+  <!-- INFORMASI -->
+  <div class="info-panel">
+    <h4>Informasi Peta</h4>
+    <p>Peta ini menampilkan persebaran fasilitas farmasi (apotek dan rumah sakit) di Provinsi Kalimantan Utara.</p>
+    <p><strong>Petunjuk:</strong> Pilih wilayah dan jenis fasilitas yang ingin ditampilkan, kemudian klik "Terapkan Filter".</p>
+  </div>
+
+  <!-- STATUS MESSAGE -->
+  <div class="status-message" id="statusMessage"></div>
+
+<script>
+  // ==================== VARIABEL GLOBAL ====================
+  let map;
+  let farmasiLayer = null;
+  let kabupatenLayer = null;
+  let labelLayer = null; // Layer untuk label wilayah
+  let lastZoomedRegion = null;
+  
+  // Data wilayah dengan warna dan zoom level yang sesuai
+  const wilayahData = [
+    { 
+      id: 'bulungan', 
+      nama: 'Kabupaten Bulungan', // Kembalikan ke nama lengkap
+      nama_singkat: 'Bulungan',
+      warna: '#fdd835',
+      zoomLevel: 9
+    },
+    { 
+      id: 'malinau', 
+      nama: 'Kabupaten Malinau',
+      nama_singkat: 'Malinau',
+      warna: '#43a047',
+      zoomLevel: 9
+    },
+    { 
+      id: 'nunukan', 
+      nama: 'Kabupaten Nunukan',
+      nama_singkat: 'Nunukan',
+      warna: '#1e88e5',
+      zoomLevel: 9
+    },
+    { 
+      id: 'tana-tidung', 
+      nama: 'Kabupaten Tana Tidung',
+      nama_singkat: 'Tana Tidung',
+      warna: '#8e24aa',
+      zoomLevel: 10
+    },
+    { 
+      id: 'kota-tarakan', 
+      nama: 'Kota Tarakan', 
+      nama_singkat: 'Tarakan',
+      warna: '#e53935',
+      zoomLevel: 11
+    }
+  ];
+
+  // ==================== DATA FASILITAS FARMASI ====================
+ const farmasiLocations = [
+    // Kota Tarakan
+    {
+      name: "RSUD Dr H Jusuf SK",
+      lat: 3.318043,
+      lng: 117.604603,
+      jenis: "Rumah Sakit",
+      kab_kota: "Kota Tarakan",
+      alamat:"Jl. Pulau Irian No.1, Kp. Satu Skip, Kec. Tarakan Tengah, Kota Tarakan, Kalimantan Utara"
+    },
+    {
+      name: "Apotek Kimia Farma Tarakan",
+      lat: 3.313464,
+      lng: 117.580726,
+      jenis: "Apotek",
+      kab_kota: "Kota Tarakan",
+      alamat:"Jl. Mulawarman No.Rt.43, Karang Anyar, Kec. Tarakan Barat, Kota Tarakan, Kalimantan Utara 77111"
+    },
+    {
+      name: "Apotek Graha Medika",
+      lat: 3.320319,
+      lng: 117.579278,
+      jenis: "Apotek",
+      kab_kota: "Kota Tarakan",
+      alamat: "Jl. Wijaya Kusuma, Karang Anyar, Kec. Tarakan Barat, Kota Tarakan, Kalimantan Utara 71211"
+    },
+    {
+      name: "Apotek Tarakan",
+      lat:  3.309951,
+      lng: 117.584878,
+      jenis: "Apotek",
+      kab_kota: "Kota Tarakan",
+      alamat: "Karang Anyar, Kec. Tarakan Barat, Kota Tarakan, Kalimantan Utara"
+    },
+    {
+      name: "Rumah Sakit Pertamina Tarakan",
+      lat: 3.322434,
+      lng: 117.574798,
+      jenis: "Rumah Sakit",
+      kab_kota: "Kota Tarakan",
+      alamat: "Jl. Mulawarman No.99, Karang Anyar Pantai, Kec. Tarakan Barat, Kota Tarakan, Kalimantan Utara 77113"
+    },
+    {
+      name: "Rumah Sakit Bhayangkara Tarakan",
+      lat:  3.418944,
+      lng: 117.548389,
+      jenis: "Rumah Sakit",
+      kab_kota: "Kota Tarakan",
+      alamat: "Utara, Juata Laut, Kec. Tarakan Utara, Kota Tarakan, Kalimantan Utara"
+    },
+    {
+      name: "Rumah Sakit Umum Kota Tarakan",
+      lat: 3.340026,
+      lng: 117.560534,
+      jenis: "Rumah Sakit",
+      kab_kota: "Kota Tarakan",
+      alamat: "8HR6+64M, Jl. Aki Babu, Karang Harapan, Kec. Tarakan Bar., Kota Tarakan, Kalimantan Utara"
+    },
+    
+    // Kabupaten Bulungan
+    {
+      name: "RSUD dr. H. Soemarno Sostroatmodjo",
+      lat: 2.830622,
+      lng: 117.380580,
+      jenis: "Rumah Sakit",
+      kab_kota: "Kabupaten Bulungan",
+      alamat: "Jl. Cendrawasih, Tj. Selor Hilir, Kec. Tj. Selor, Kabupaten Bulungan, Kalimantan Utara 77215"
+    },
+    {
+      name: "Apotek Sumber Sehat Baru",
+      lat: 2.840384,
+      lng: 117.361820,
+      jenis: "Apotek",
+      kab_kota: "Kabupaten Bulungan",
+      alamat: "Jl. Soedirman No.28, Tj. Selor Hilir, Kec. Tj. Selor, Kabupaten Bulungan, Kalimantan Utara 77214"
+    },
+    {
+      name: "Apotek Bulungan Farma",
+      lat: 2.843218,
+      lng: 117.362523,
+      jenis: "Apotek",
+      kab_kota: "Kabupaten Bulungan",
+      alamat: "Jl. Pahlawan, Tj. Selor Hilir, Kec. Tj. Selor, Kabupaten Bulungan, Kalimantan Utara 77214"
+    },
+    {
+      name: "Apotek Benuanta",
+      lat:  2.840625,
+      lng: 117.364347,
+      jenis: "Apotek",
+      kab_kota: "Kabupaten Bulungan",
+      alamat: "Jl. Skip I, RT.16/RW.06, Tj. Selor Hilir, Kec. Tj. Selor, Kabupaten Bulungan, Kalimantan Utara 77212"
+    },
+    {
+      name: "Apotek Segar",
+      lat:  2.842618,
+      lng: 117.362534,
+      jenis: "Apotek",
+      kab_kota: "Kabupaten Bulungan",
+      alamat: "Jl. H. Maskur, Tj. Selor Hilir, Kec. Tj. Selor, Kabupaten Bulungan, Kalimantan Utara 77212"
+    },
+    {
+      name: "Apotek DWH",
+      lat:  2.845228,
+      lng: 117.368311,
+      jenis: "Apotek",
+      kab_kota: "Kabupaten Bulungan",
+      alamat: "R9W9+38R, Jl. Kolonel Soetadji, Tj. Selor Hilir, Kec. Tj. Selor, Kabupaten Bulungan, Kalimantan Utara 77214"
+    },
+    {
+      name: "Apotek Kimia Farma Bulungan",
+      lat:  2.845388,
+      lng: 117.368858,
+      jenis: "Apotek",
+      kab_kota: "Kabupaten Bulungan",
+      alamat: "Jl. Kol. Soetadji Rt 16, RT.16/RW.05, Tj. Selor Hilir, Kec. Tj. Selor, Kabupaten Bulungan, Kalimantan Utara 77214"
+    },
+    {
+      name: "Apotek Rambutan",
+      lat: 2.849219,
+      lng: 117.364819,
+      jenis: "Apotek",
+      kab_kota: "Kabupaten Bulungan",
+      alamat: "Jl. Rambutan No.48, RT.26/RW.05, Tj. Selor Hilir, Kec. Tj. Selor, Kabupaten Bulungan, Kalimantan Utara 77214"
+    },
+    {
+      name: "Apotek Lima",
+      lat: 2.849080,
+      lng: 117.365141,
+      jenis: "Apotek",
+      kab_kota: "Kabupaten Bulungan",
+      alamat: "Jl. Rambutan, Tj. Selor Hilir, Kec. Tj. Selor, Kabupaten Bulungan, Kalimantan Utara 77212"
+    },
+    {
+      name: "Apotek Mia Farma",
+      lat: 2.855456,
+      lng: 117.366938,
+      jenis: "Apotek",
+      kab_kota: "Kabupaten Bulungan",
+      alamat: "Jl. Sengkawit No.13, Tj. Selor Hilir, Kec. Tj. Selor, Kabupaten Bulungan, Kalimantan Utara 77212"
+    },
+    {
+      name: "Apotek Tanjung Selor",
+      lat: 2.854834,
+      lng: 117.369840,
+      jenis: "Apotek",
+      kab_kota: "Kabupaten Bulungan",
+      alamat: "V939+WX8, Jl. Sengkawit, Tj. Selor Hilir, Kec. Tj. Selor, Kabupaten Bulungan, Kalimantan Utara 77216"
+    },
+    {
+      name: "Apotek Super Sehat",
+      lat: 2.853104,
+      lng: 117.374593,
+      jenis: "Apotek",
+      kab_kota: "Kabupaten Bulungan",
+      alamat: "Pasar Induk, Kompleks ruko seberang depan Jl. Sengkawit, Tj. Selor Hilir, Kec. Tj. Selor, Kabupaten Bulungan, Kalimantan Utara 77212"
+    },
+    
+    
+    // Kabupaten Malinau
+    {
+      name: "RSUD Malinau",
+      lat: 3.603129,
+      lng: 116.609332,
+      jenis: "Rumah Sakit",
+      kab_kota: "Kabupaten Malinau",
+      alamat: "Respen Tubu, Kec. Malinau Utara, Kabupaten Malinau, Kalimantan Utara 77554"
+    },
+    {
+      name: "Apotek Sehat Utama",
+      lat: 3.589471,
+      lng: 116.622797,
+      jenis: "Apotek",
+      kab_kota: "Kabupaten Malinau",
+      alamat: "HJQF+Q3G, Jl. Panembahan, Malinau Kota, Kec. Malinau Kota, Kabupaten Malinau, Kalimantan Utara 77554"
+    },
+    
+    // Kabupaten Nunukan
+    {
+      name: "RSUD Nunukan",
+      lat:  4.111480,
+      lng:  117.625095,
+      jenis: "Rumah Sakit",
+      kab_kota: "Kabupaten Nunukan",
+      alamat: "Jl. Ujang Fatimah No.1, Binusan, Kec. Nunukan, Kabupaten Nunukan, Kalimantan Utara 77482"
+    },
+    {
+      name: "Apotek Nunukan Farma",
+      lat:  4.137350,
+      lng: 117.650292,
+      jenis: "Apotek",
+      kab_kota: "Kabupaten Nunukan",
+      alamat: "Jl. Bhayangkara, Nunukan Tim., Kec. Nunukan, Kabupaten Nunukan, Kalimantan Utara 77482"
+    },
+    
+    // Kabupaten Tana Tidung
+    {
+      name: "RSUD Akhmad Berahim KTT",
+      lat: 3.605950,
+      lng: 116.912534,
+      jenis: "Rumah Sakit",
+      kab_kota: "Kabupaten Tana Tidung",
+      alamat: "Tideng Pale, Kec. Sesayap, Kabupaten Tana Tidung, Kalimantan Utara 77152"
+    },
+    {
+      name: "Apotek Mulya",
+      lat: 3.609237,
+      lng: 116.906156,
+      jenis: "Apotek",
+      kab_kota: "Kabupaten Tana Tidung",
+      alamat: "Tideng Pale, Kec. Sesayap, Kabupaten Tana Tidung, Kalimantan Utara 77152"
+    }
+  ];
+
+
+  // ==================== FUNGSI UTAMA ====================
+
+  // Fungsi inisialisasi peta
+  function initMap() {
+    console.log('Inisialisasi peta...');
+    
+    // Buat peta dengan smooth zoom
+    map = L.map('map', {
+      zoomSnap: 0.1,
+      zoomDelta: 0.5,
+      easeLinearity: 0.3
+    }).setView([3.2, 117.6], 7);
+    
+    // Tambahkan basemap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap | Muhammad Hasbi Ash Shiddiqy - 24611019'
+    }).addTo(map);
+    
+    // Tambahkan scale bar
+   L.control.scale({ 
+  position: 'topright',
+  metric: true,
+  imperial: false, // HILANGKAN MIL
+  maxWidth: 150
+}).addTo(map);
+    
+    // Inisialisasi kontrol wilayah
+    initRegionControls();
+    
+    // Load data kabupaten dari GeoJSON
+    loadGeoJSONData();
+    
+    // Render data farmasi
+    renderFarmasiLayer();
+    
+    console.log(`Data farmasi: ${farmasiLocations.length} lokasi`);
+    
+    // Tampilkan notifikasi awal
+    setTimeout(() => {
+      showStatus(`Menampilkan ${farmasiLocations.length} fasilitas farmasi`);
+    }, 1000);
+  }
+
+  // Fungsi inisialisasi kontrol wilayah
+  function initRegionControls() {
+    const regionControls = document.getElementById('region-controls');
+    regionControls.innerHTML = '';
+    
+    // Tambahkan opsi semua wilayah
+    const allItem = document.createElement('div');
+    allItem.className = 'control-item';
+    allItem.onclick = () => toggleCheckbox('all-regions');
+    allItem.innerHTML = `
+      <div class="color-box" style="background: linear-gradient(45deg, #fdd835, #43a047, #1e88e5, #8e24aa, #e53935);"></div>
+      <div class="control-label">Semua Wilayah</div>
+      <input type="checkbox" class="control-checkbox" id="all-regions" checked>
+    `;
+    regionControls.appendChild(allItem);
+    
+    // Tambahkan setiap wilayah
+    wilayahData.forEach(region => {
+      const item = document.createElement('div');
+      item.className = 'control-item';
+      item.onclick = () => toggleCheckbox(`region-${region.id}`);
+      item.innerHTML = `
+        <div class="color-box" style="background-color: ${region.warna};"></div>
+        <div class="control-label">${region.nama}</div>
+        <input type="checkbox" class="control-checkbox" id="region-${region.id}" checked>
+      `;
+      regionControls.appendChild(item);
+    });
+  }
+
+  // Fungsi toggle checkbox
+  function toggleCheckbox(id) {
+    const checkbox = document.getElementById(id);
+    if (checkbox) {
+      checkbox.checked = !checkbox.checked;
+      
+      // Jika "Semua Wilayah" di-toggle, update semua checkbox wilayah
+      if (id === 'all-regions') {
+        const regionCheckboxes = document.querySelectorAll('input[id^="region-"]');
+        regionCheckboxes.forEach(cb => {
+          cb.checked = checkbox.checked;
+        });
+      }
+      
+      // Auto apply filter
+      applyFilters();
+    }
+  }
+
+  // ==================== FUNGSI ZOOM KE WILAYAH ====================
+
+  // Fungsi untuk zoom ke wilayah yang dipilih (tidak terlalu besar)
+  function zoomToSelectedRegions() {
+    const selectedRegions = getSelectedRegions();
+    
+    // Jika semua wilayah atau tidak ada yang dipilih, zoom ke provinsi
+    if (selectedRegions.length === 0 || selectedRegions.length === wilayahData.length) {
+      map.flyTo([3.2, 117.6], 7, {
+        duration: 1.5,
+        easeLinearity: 0.3
+      });
+      lastZoomedRegion = null;
+      return;
+    }
+    
+    // Jika hanya satu wilayah yang dipilih, zoom ke wilayah itu
+    if (selectedRegions.length === 1) {
+      const regionId = selectedRegions[0];
+      const region = wilayahData.find(w => w.id === regionId);
+      
+      if (region && kabupatenLayer) {
+        // Cari layer wilayah yang sesuai
+        kabupatenLayer.eachLayer(function(layer) {
+          if (layer.feature) {
+            const featureRegion = findMatchingRegion(layer.feature.properties);
+            if (featureRegion && featureRegion.id === regionId) {
+              // Dapatkan pusat wilayah
+              const bounds = layer.getBounds();
+              const center = bounds.getCenter();
+              
+              // Gunakan zoom level yang sudah ditentukan (tidak terlalu besar)
+              const zoomLevel = region.zoomLevel;
+              
+              // Smooth zoom ke wilayah
+              map.flyTo(center, zoomLevel, {
+                duration: 1.5,
+                easeLinearity: 0.3
+              });
+              
+              lastZoomedRegion = regionId;
+              showStatus(`Menampilkan fasilitas farmasi di ${region.nama}`, 1500);
+              return;
+            }
+          }
+        });
+      }
+    } 
+    // Jika lebih dari satu wilayah dipilih, zoom ke semua wilayah tersebut
+    else if (selectedRegions.length > 1) {
+      const boundsArray = [];
+      
+      kabupatenLayer.eachLayer(function(layer) {
+        if (layer.feature) {
+          const featureRegion = findMatchingRegion(layer.feature.properties);
+          if (featureRegion && selectedRegions.includes(featureRegion.id)) {
+            boundsArray.push(layer.getBounds());
+          }
+        }
+      });
+      
+      if (boundsArray.length > 0) {
+        // Gabungkan semua bounds
+        const combinedBounds = L.latLngBounds(boundsArray);
+        
+        // Zoom ke bounds gabungan dengan padding
+        map.flyToBounds(combinedBounds, {
+          padding: [50, 50],
+          duration: 1.5,
+          easeLinearity: 0.3,
+          maxZoom: 8  // Tidak terlalu zoom in
+        });
+        
+        lastZoomedRegion = 'multiple';
+        showStatus(`Menampilkan fasilitas farmasi di ${selectedRegions.length} wilayah`, 1500);
+      }
+    }
+  }
+
+  // ==================== FUNGSI LOAD DATA ====================
+
+  // Fungsi load data kabupaten dari GeoJSON
+  async function loadGeoJSONData() {
+    try {
+      showStatus('Memuat data wilayah...');
+      
+      const response = await fetch('assets/kaltara_kabupaten.geojson');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Validasi struktur data
+      if (!data || !data.type || data.type !== 'FeatureCollection' || !data.features) {
+        throw new Error('Format GeoJSON tidak valid');
+      }
+      
+      console.log('Data GeoJSON berhasil dimuat:', data);
+      
+      hideStatus();
+      renderKabupatenLayer(data);
+      renderRegionLabels(data); // Render label wilayah
+      
+    } catch (error) {
+      console.error('Gagal memuat data GeoJSON:', error);
+      showStatus('Gagal memuat data wilayah. Menggunakan data default.', 3000);
+      
+      // Fallback: buat polygon sederhana
+      setTimeout(() => {
+        createFallbackPolygons();
+        renderFallbackLabels();
+        hideStatus();
+      }, 3000);
+    }
+  }
+
+  // Fungsi render layer kabupaten dari GeoJSON
+  function renderKabupatenLayer(geoJSONData) {
+    // Hapus layer lama
+    if (kabupatenLayer) {
+      map.removeLayer(kabupatenLayer);
+    }
+    
+    if (!geoJSONData || !geoJSONData.features) {
+      console.error('Data GeoJSON tidak tersedia');
+      return;
+    }
+    
+    console.log('Rendering kabupaten layer dengan', geoJSONData.features.length, 'fitur');
+    
+    // Buat layer baru dari GeoJSON
+    kabupatenLayer = L.geoJSON(geoJSONData, {
+      style: function(feature) {
+        // Cari data wilayah berdasarkan nama
+        const region = findMatchingRegion(feature.properties);
+        const isSelected = document.getElementById(`region-${region?.id}`)?.checked || false;
+        
+        return {
+          fillColor: region ? region.warna : '#cccccc',
+          color: '#333333',
+          weight: isSelected ? 3 : 1,
+          fillOpacity: isSelected ? 0.5 : 0.2,
+          opacity: 1
+        };
+      },
+      onEachFeature: function(feature, layer) {
+        // Cari region yang sesuai
+        const region = findMatchingRegion(feature.properties);
+        
+        if (!region) {
+          console.warn('Tidak menemukan region untuk:', feature.properties);
+          return;
+        }
+        
+        // Hitung jumlah fasilitas di wilayah ini
+        const count = farmasiLocations.filter(loc => {
+          const locRegionId = getRegionIdFromName(loc.kab_kota);
+          return locRegionId === region.id;
+        }).length;
+        
+        // Tambahkan popup
+        layer.bindPopup(`
+          <div style="padding: 10px; min-width: 200px;">
+            <h4 style="margin: 0 0 10px 0; color: #333;">${region.nama}</h4>
+            <p style="margin: 5px 0; color: #666;">
+              <strong>Jumlah Fasilitas Farmasi:</strong> ${count}
+            </p>
+            <p style="margin: 5px 0; color: #666;">
+              <small>Klik untuk zoom ke wilayah ini</small>
+            </p>
+          </div>
+        `);
+        
+        // Tambahkan event click untuk zoom yang pas
+        layer.on('click', function() {
+          // Dapatkan pusat wilayah
+          const bounds = layer.getBounds();
+          const center = bounds.getCenter();
+          
+          // Gunakan zoom level yang sudah ditentukan
+          const zoomLevel = region.zoomLevel;
+          
+          // Smooth zoom ke wilayah
+          map.flyTo(center, zoomLevel, {
+            duration: 1.5,
+            easeLinearity: 0.3
+          });
+          
+          // Highlight sementara
+          layer.setStyle({ weight: 4, fillOpacity: 0.7 });
+          setTimeout(() => {
+            const isSelected = document.getElementById(`region-${region.id}`)?.checked || false;
+            layer.setStyle({
+              weight: isSelected ? 3 : 1,
+              fillOpacity: isSelected ? 0.5 : 0.2
+            });
+          }, 2000);
+        });
+        
+        // Event hover
+        layer.on('mouseover', function() {
+          layer.setStyle({ weight: 2, fillOpacity: 0.6 });
+        });
+        
+        layer.on('mouseout', function() {
+          const isSelected = document.getElementById(`region-${region.id}`)?.checked || false;
+          layer.setStyle({
+            weight: isSelected ? 3 : 1,
+            fillOpacity: isSelected ? 0.5 : 0.2
+          });
+        });
+      }
+    }).addTo(map);
+    
+    console.log('Kabupaten layer berhasil dirender dari GeoJSON');
+  }
+
+  // Fungsi render label wilayah
+ function renderRegionLabels(geoJSONData) {
+  if (labelLayer) {
+    map.removeLayer(labelLayer);
+  }
+  
+  const labels = [];
+  
+  geoJSONData.features.forEach(feature => {
+    const region = findMatchingRegion(feature.properties);
+    
+    if (!region) return;
+    
+    // Hitung centroid dengan urutan yang benar
+    let centroid = null;
+    
+    if (feature.geometry.type === 'Polygon') {
+      const coordinates = feature.geometry.coordinates[0];
+      let sumLng = 0, sumLat = 0;
+      
+      coordinates.forEach(coord => {
+        sumLng += coord[0];  // Longitude
+        sumLat += coord[1];  // Latitude
+      });
+      
+      // BENAR: [latitude, longitude]
+      centroid = [
+        sumLat / coordinates.length,  // Latitude
+        sumLng / coordinates.length   // Longitude
+      ];
+      
+    } else if (feature.geometry.type === 'MultiPolygon') {
+      const coordinates = feature.geometry.coordinates[0][0];
+      let sumLng = 0, sumLat = 0;
+      
+      coordinates.forEach(coord => {
+        sumLng += coord[0];  // Longitude
+        sumLat += coord[1];  // Latitude
+      });
+      
+      centroid = [
+        sumLat / coordinates.length,  // Latitude
+        sumLng / coordinates.length   // Longitude
+      ];
+    }
+    
+    if (centroid) {
+      const label = L.marker(centroid, {
+        icon: L.divIcon({
+          html: `<div class="region-label">${region.nama_singkat}</div>`,
+          iconSize: null,  // Biarkan null agar sesuai dengan konten
+          iconAnchor: [0, 15],
+          className: 'region-label-icon'
+        }),
+        interactive: false,
+        zIndexOffset: 1000  // Pastikan di atas layer lain
+      });
+      
+      labels.push(label);
+    }
+  });
+
+  labelLayer = L.layerGroup(labels);
+  labelLayer.addTo(map);
+  
+  console.log('Label wilayah berhasil dirender', labels.length, 'label');
+}
+  // Fungsi render label fallback
+  function renderFallbackLabels() {
+    const labels = [];
+    
+    wilayahData.forEach(region => {
+      // Tentukan posisi label berdasarkan wilayah
+      let lat, lng;
+      
+      switch(region.id) {
+        case 'bulungan':
+          lat = 3.3; lng = 117.3;
+          break;
+        case 'malinau':
+          lat = 3.7; lng = 116.3;
+          break;
+        case 'nunukan':
+          lat = 4.1; lng = 117.3;
+          break;
+        case 'tana-tidung':
+          lat = 3.55; lng = 117.0;
+          break;
+        case 'kota-tarakan':
+          lat = 3.3; lng = 117.6;
+          break;
+        default:
+          lat = 3.2; lng = 117.6;
+      }
+      
+      const label = L.marker([lat, lng], {
+        icon: L.divIcon({
+          html: `<div class="region-label">${region.nama_singkat}</div>`,
+          iconSize: [100, 30],
+          iconAnchor: [50, 15],
+          className: 'region-label-icon'
+        }),
+        interactive: false
+      });
+      
+      labels.push(label);
+    });
+    
+    labelLayer = L.layerGroup(labels).addTo(map);
+  }
+
+  // Fungsi untuk mencocokkan wilayah berdasarkan properti GeoJSON
+  function findMatchingRegion(properties) {
+    // Coba beberapa kemungkinan nama properti
+    const possibleNames = [
+      properties.nama,
+      properties.NAME,
+      properties.name,
+      properties.NAMA,
+      properties.KABUPATEN,
+      properties.kabupaten,
+      properties.KABKOTA,
+      properties.kabkota
+    ];
+    
+    for (const name of possibleNames) {
+      if (!name) continue;
+      
+      // Cari di wilayahData
+      const region = wilayahData.find(w => 
+        name.toLowerCase().includes(w.nama_singkat.toLowerCase()) ||
+        name.toLowerCase().includes(w.nama.toLowerCase()) ||
+        w.nama.toLowerCase().includes(name.toLowerCase())
+      );
+      
+      if (region) {
+        console.log(`Cocokkan: "${name}" -> ${region.nama}`);
+        return region;
+      }
+    }
+    
+    console.warn('Tidak menemukan region untuk properti:', properties);
+    return null;
+  }
+
+  // Fungsi membuat polygon fallback sederhana
+  function createFallbackPolygons() {
+    console.log('Membuat polygon fallback...');
+    
+    const polygons = wilayahData.map(region => {
+      // Buat koordinat berdasarkan wilayah
+      let coordinates;
+      
+      switch(region.id) {
+        case 'bulungan':
+          coordinates = [
+            [2.8, 116.8], [3.8, 116.8], [3.8, 117.8], [2.8, 117.8], [2.8, 116.8]
+          ];
+          break;
+        case 'malinau':
+          coordinates = [
+            [2.2, 115.8], [3.2, 115.8], [3.2, 116.8], [2.2, 116.8], [2.2, 115.8]
+          ];
+          break;
+        case 'nunukan':
+          coordinates = [
+            [3.8, 116.8], [4.3, 116.8], [4.3, 117.8], [3.8, 117.8], [3.8, 116.8]
+          ];
+          break;
+        case 'tana-tidung':
+          coordinates = [
+            [3.3, 116.5], [3.8, 116.5], [3.8, 117.2], [3.3, 117.2], [3.3, 116.5]
+          ];
+          break;
+        case 'kota-tarakan':
+          coordinates = [
+            [3.25, 117.55], [3.35, 117.55], [3.35, 117.65], [3.25, 117.65], [3.25, 117.55]
+          ];
+          break;
+        default:
+          coordinates = [
+            [3.1, 117.5], [3.3, 117.5], [3.3, 117.7], [3.1, 117.7], [3.1, 117.5]
+          ];
+      }
+      
+      const polygon = L.polygon(coordinates, {
+        fillColor: region.warna,
+        color: '#333333',
+        weight: 1,
+        fillOpacity: 0.3,
+        opacity: 1
+      });
+      
+      // Hitung jumlah fasilitas
+      const count = farmasiLocations.filter(loc => {
+        const locRegionId = getRegionIdFromName(loc.kab_kota);
+        return locRegionId === region.id;
+      }).length;
+      
+      // Tambahkan popup
+      polygon.bindPopup(`
+        <div style="padding: 10px; min-width: 200px;">
+          <h4 style="margin: 0 0 10px 0; color: #333;">${region.nama}</h4>
+          <p style="margin: 5px 0; color: #666;">
+            <strong>Jumlah Fasilitas Farmasi:</strong> ${count}
+          </p>
+          <p style="margin: 5px 0; color: #666;">
+            <small>Klik untuk zoom ke wilayah ini</small>
+          </p>
+        </div>
+      `);
+      
+      polygon.on('click', function() {
+        // Smooth zoom ke wilayah dengan zoom level yang pas
+        const center = polygon.getBounds().getCenter();
+        map.flyTo(center, region.zoomLevel, {
+          duration: 1.5,
+          easeLinearity: 0.3
+        });
+        
+        polygon.setStyle({ weight: 3, fillOpacity: 0.5 });
+        setTimeout(() => {
+          const isSelected = document.getElementById(`region-${region.id}`)?.checked || false;
+          polygon.setStyle({
+            weight: isSelected ? 2 : 1,
+            fillOpacity: isSelected ? 0.4 : 0.3
+          });
+        }, 2000);
+      });
+      
+      return polygon;
+    });
+    
+    kabupatenLayer = L.layerGroup(polygons).addTo(map);
+  }
+
+  // Fungsi render layer farmasi dari array JavaScript
+  function renderFarmasiLayer() {
+    // Hapus layer lama
+    if (farmasiLayer) {
+      map.removeLayer(farmasiLayer);
+    }
+    
+    // Get selected filters
+    const selectedRegions = getSelectedRegions();
+    const selectedTypes = getSelectedTypes();
+    
+    // Filter data berdasarkan pilihan
+    const filteredLocations = farmasiLocations.filter(location => {
+      // Filter wilayah
+      const regionId = getRegionIdFromName(location.kab_kota);
+      const isRegionSelected = selectedRegions.length === 0 || selectedRegions.includes(regionId);
+      
+      // Filter jenis
+      let isTypeSelected = false;
+      if (selectedTypes.includes('all')) {
+        isTypeSelected = true;
+      } else {
+        if (selectedTypes.includes('rs') && location.jenis === "Rumah Sakit") {
+          isTypeSelected = true;
+        }
+        if (selectedTypes.includes('apotek') && location.jenis === "Apotek") {
+          isTypeSelected = true;
+        }
+      }
+      
+      return isRegionSelected && isTypeSelected;
+    });
+    
+    console.log(`Menampilkan ${filteredLocations.length} dari ${farmasiLocations.length} fasilitas farmasi`);
+    
+    // Tampilkan notifikasi - DIUBAH KE "FASILITAS FARMASI"
+    showStatus(`Menampilkan ${filteredLocations.length} fasilitas farmasi`);
+    
+    // Buat layer marker untuk setiap lokasi
+    const markers = [];
+    
+    filteredLocations.forEach(location => {
+      // Buat custom marker berdasarkan jenis
+      let iconHtml;
+      let iconColor;
+      
+      if (location.jenis === "Rumah Sakit") {
+        iconHtml = '🏥';
+        iconColor = '#e53935';
+      } else {
+        iconHtml = '💊';
+        iconColor = '#1e88e5';
+      }
+      
+      const marker = L.marker([location.lat, location.lng], {
+        icon: L.divIcon({
+          html: `
+            <div style="
+              background-color: ${iconColor};
+              color: white;
+              width: 26px;
+              height: 26px;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 15px;
+              border: 2px solid white;
+              box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+            ">
+              ${iconHtml}
+            </div>
+          `,
+          iconSize: [40, 40],
+          iconAnchor: [20, 40],
+          popupAnchor: [0, -40],
+          className: 'custom-marker-icon'
+        })
+      });
+      
+      // Tambahkan popup - DIUBAH MENJADI "FASILITAS FARMASI"
+      marker.bindPopup(`
+        <div style="padding: 10px; min-width: 200px;">
+          <h4 style="margin: 0 0 10px 0; color: #333;">${location.name}</h4>
+          <p style="margin: 5px 0; color: #666;">
+            <strong>Jenis Fasilitas Farmasi:</strong> ${location.jenis}
+          </p>
+          <p style="margin: 5px 0; color: #666;">
+            <strong>Wilayah:</strong> ${location.kab_kota}
+          </p>
+          <p style="margin: 5px 0; color: #666;">
+            <strong>Koordinat:</strong> ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}
+          </p>
+          <p style="margin: 5px 0; color:#666;">
+          <strong>Alamat:</strong> ${location.alamat}
+          </p>
+        </div>
+      `);
+      
+      // Tambahkan tooltip
+      marker.bindTooltip(location.name, {
+        direction: 'top',
+        offset: [0, -15],
+        opacity: 0.9
+      });
+      
+      markers.push(marker);
+    });
+    
+    // Buat layer group dari semua marker
+    farmasiLayer = L.layerGroup(markers).addTo(map);
+  }
+
+  // Fungsi get selected regions
+  function getSelectedRegions() {
+    const selected = [];
+    const allRegionsChecked = document.getElementById('all-regions')?.checked;
+    
+    if (allRegionsChecked) return selected; // Kosong artinya semua wilayah
+    
+    wilayahData.forEach(region => {
+      const checkbox = document.getElementById(`region-${region.id}`);
+      if (checkbox && checkbox.checked) {
+        selected.push(region.id);
+      }
+    });
+    
+    return selected;
+  }
+
+  // Fungsi get selected types
+  function getSelectedTypes() {
+    const selected = [];
+    
+    if (document.getElementById('all-facilities')?.checked) {
+      selected.push('all');
+    }
+    if (document.getElementById('rs-only')?.checked) {
+      selected.push('rs');
+    }
+    if (document.getElementById('apotek-only')?.checked) {
+      selected.push('apotek');
+    }
+    
+    return selected;
+  }
+
+  // Fungsi get region id from name
+  function getRegionIdFromName(nama) {
+    if (!nama) return '';
+    
+    // Normalisasi nama - hilangkan "Kabupaten" atau "Kota"
+    const cleanName = nama.replace('Kabupaten ', '').replace('Kota ', '').trim().toLowerCase();
+    
+    // Cari di wilayahData
+    const region = wilayahData.find(w => 
+      w.nama_singkat.toLowerCase() === cleanName ||
+      cleanName.includes(w.nama_singkat.toLowerCase())
+    );
+    
+    return region ? region.id : cleanName.replace(/\s+/g, '-');
+  }
+
+  // Fungsi apply filters
+  function applyFilters() {
+    console.log('Menerapkan filter...');
+    
+    // Render farmasi layer
+    renderFarmasiLayer();
+    
+    // Update style kabupaten layer
+    if (kabupatenLayer) {
+      kabupatenLayer.eachLayer(function(layer) {
+        if (layer.feature) {
+          const region = findMatchingRegion(layer.feature.properties);
+          if (region) {
+            const isSelected = document.getElementById(`region-${region.id}`)?.checked || false;
+            layer.setStyle({
+              weight: isSelected ? 3 : 1,
+              fillOpacity: isSelected ? 0.5 : 0.2
+            });
+          }
+        }
+      });
+    }
+    
+    // Zoom ke wilayah yang dipilih (tidak terlalu besar)
+    zoomToSelectedRegions();
+    
+    // Pastikan label tetap di atas semua layer
+    if (labelLayer) {
+      labelLayer.bringToFront();
+    }
+  }
+
+  // Fungsi reset filters
+  function resetFilters() {
+    // Reset semua checkbox
+    document.querySelectorAll('.control-checkbox').forEach(checkbox => {
+      checkbox.checked = true;
+    });
+    
+    // Reset view dengan smooth zoom
+    map.flyTo([3.2, 117.6], 7, {
+      duration: 1.5,
+      easeLinearity: 0.3
+    });
+    
+    // Apply filters
+    applyFilters();
+    
+    // Tampilkan notifikasi reset - DIUBAH
+    showStatus('Filter telah direset');
+  }
+
+  // ==================== FUNGSI NOTIFIKASI ====================
+  
+  // Fungsi show status message
+  function showStatus(message, duration = 2000) {
+    const statusEl = document.getElementById('statusMessage');
+    statusEl.textContent = message;
+    statusEl.style.display = 'block';
+    
+    // Sembunyikan setelah durasi yang ditentukan
+    if (duration > 0) {
+      setTimeout(hideStatus, duration);
+    }
+  }
+
+  // Fungsi hide status message
+  function hideStatus() {
+    const statusEl = document.getElementById('statusMessage');
+    statusEl.style.display = 'none';
+  }
+
+  // ==================== INISIALISASI ====================
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing map...');
+    initMap();
+  });
+
+  // Expose functions to global scope
+  window.toggleCheckbox = toggleCheckbox;
+  window.applyFilters = applyFilters;
+  window.resetFilters = resetFilters;
+
+</script>
+</body>
+</html>
